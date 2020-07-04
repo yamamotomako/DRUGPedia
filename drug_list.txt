@@ -1,0 +1,16 @@
+type	gene	drug	drug_ja	product
+RNA	CD20	rituximab	リツキシマブ	Rituxan
+RNA	CD20	ibritumomab tiuxetan	イブリツモマブ チウキセタン		Zevalin ytterium
+RNA	CD20	obinutuzumab	オビヌツズマブ	Gazyva
+RNA	CD20	ofatumumab	オファツムマブ	Arzerra
+RNA	CD22	inotuzumab ozogamicin	イノツズマブ オゾガマイシン	BESPONSA
+RNA	CD30	brentuximab vedotin	ブレンツキシマブ ベドチン	Adcetris
+RNA	CD33	gemtuzumab ozogamicin	ゲムツズマブ オゾガマイシン	Mylotarg
+RNA	CD38	daratumumab	ダラツムマブ	Darzalex
+RNA	CD52	alemtuzumab	アレムツズマブ	Campath
+RNA	SLAMF7	elotuzumab	エロツズマブ	Empliciti
+CNV	5q-	Lenalidomide	レナリドミド	Revlimid
+SNV	TP53	Azacitidine	アザシチジン	Vidaza
+SNV	STAT3	Ciclosporin	シクロスポリン	Neoral
+SNV	CALR	Ruxolitinib	ルキソリチニブ	Jakavi
+SNV	DDX41	Lenalidomide	レナリドミド	Revlimid

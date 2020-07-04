@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <title>drug search</title>
+    <meta http-eqiv="Content-Type" content="text/html; charset=UTF-8">
+    <script src="./lib/jquery.1.11.0.min.js"></script>
+    <script src="./lib/jquery.xdomainajax.js"></script>
+
+</head>
+
+<style>
+body{
+    font-family: Meiryo;
+/*    padding: 0px;
+    margin: 0px;*/
+}
+table{
+    border: 1px black;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+table th{
+    font-family: Meiryo;
+    font-size: 13px;
+}
+table tr td, table tr th{
+    font-size: 12px;
+}
+.rct_url{
+    font-size: 11px;
+}
+.rct_table, .ind_table{
+    position: relative;
+    left: 30px;
+    display: none;
+    background-color: white;
+}
+.drug_header{
+    position: relative;
+    left: 10px;
+}
+#right_area{
+    overflow-y: scroll;
+}
+.open_table{
+    position: relative;
+    left: 30px;
+    font-size: 12px;
+}
+.drug_wapper{
+    background-color: skyblue;
+    position: relative;
+    left: 10px;
+    width: 98%;
+    padding: 5px;
+    border-radius: 5px 5px 5px 5px;
+}
+
+
+
+</style>
+
+
+<script>
+
+$(function(){
+    $(document).on("click", ".open_table", function(){
+        var id = $(this).attr("id").replace("btn","table")
+        $("#"+id).css("display", "block")
+    })
+})
+
+
+function table_init(){
+    $("#result_diseasename").html("")
+    $("#result_rna").html("")
+    $("#result_vcf").html("")
+    $("#result_wfg").html("")
+    $("#result_log2").html("")
+}
+
+function get_clinicaltrial(name, i, type){
+    $.ajax({
+        type: "POST",
+        url: "./server.php",
+        data: {
+            "type": "search_drug",
+            "text": name,
+            "row_num": i
+        },
+        success: function(json){
+            var data = json.split("_")
+            var row = data[1]
+            var ctg = data[2].split(",")
+            for (var j=0; j<ctg.length; j++){
+                if (ctg[j] == ""){
+                    continue
+                }
+                var buf = ctg[j].split("|")
+                var id = buf[0]
+                var status = buf[1]
+                var title = buf[2]
+                if (title.length > 60){
+                    title = title.slice(0,60)+"..."
+                }
+                if (id.slice(0,3)=="Jap"){
+                    var url = "https://rctportal.niph.go.jp/s/detail/jp?trial_id="+id
+                }else{
+                    var url = "https://rctportal.niph.go.jp/s/detail/um?trial_id="+id
+                }
+
+                var str = "<tr id='rct_"+type+"_"+id+"'><td class='rct_url'><a href='"+url+"' target='_blank'>"+id+"</td><td>"+status+"</td><td>"+title+"</td></tr>"
+
+                if($("#rct_"+type+"_"+id)[0] == undefined){
+                    $("#table_"+type+"_ctg_"+i).append(str)
+                }
+            }
+
+
+        }
+    }).fail(function(response, textStatus, jqXHR){
+        console.log(response)
+        console.log(textStatus)
+        console.log(jqXHR)
+    });
+
+}
+
+
+
+
+
+
+
+
+$(function(){
+    $("#search_btn").click(function(){
+        table_init()
+
+        var search_text = $("#search_text").val()
+
+        var fd = new FormData();
+
+
+        //search wfg
+        if($('input[type=file]')[3].files.length == 0){
+            $("#result_wfg").append("<div>WfGダウンロードファイルを指定してください。</div>")
+        }else{
+            fd.append("json_file", $('input[type=file]')[3].files[0])
+
+            $.ajax({
+                type: "POST",
+                url: "../../cgi-bin/drug/upload_wfg.py",
+                data: fd,
+                processData: false,
+                contentType: false,
+                datatype: "json",
+                success: function(json){
+                    var html = ""
+                    if (json == ""){
+                        $("#table_wfg").after("<div>検索結果はありません。</div>")
+                        return
+                    }
+
+                    var data = json.split("|")
+                    for (var i=0; i<data.length; i++){
+                        var buf = data[i].split(",")
+                        if (buf[1] == undefined){
+                            continue
+                        }
+
+                        var str = "<div class='drug_wapper'>"
+                                + "<span class='drug_header' id='table_wfg_"+i+"'>"+buf[1]+"("+buf[2]+") 製品名："+buf[3]+"</span>"
+                                //+ "<input type=button class='open_table' id=btn_wfg_ind_"+i+" value='医薬品一覧'>"
+                                + "<input type=button class='open_table' id=btn_wfg_ctg_"+i+" value='治験一覧'>"
+                                //+ "<table class='ind_table' id='table_wfg_ind_"+i+"' border='1' width='70%'><tbody>"+ind_str+"</tbody></table>"
+                                //+ "<br>"
+                                + "<table class='rct_table' id='table_wfg_ctg_"+i+"' border='1' width='95%'><tbody>"
+                                + "<tr><th width='3%'>治験ID</th><th width='6%'>ステータス</th><th width='50%'>タイトル</th></tr>"
+                                + "</tbody></table>"
+                                + "</div>"
+                                + "<br>"
+
+                        $("#result_wfg").append(str)
+
+                        get_clinicaltrial(buf[1], i, "wfg")
+                        get_clinicaltrial(buf[2], i, "wfg")
+                    }
+                },
+            }).fail(function(response, textStatus, jqXHR){
+                console.log(response)
+                console.log(textStatus)
+                console.log(jqXHR)
+            });
+        }
+
+        //search rna
+        if($('input[type=file]')[1].files.length == 0){
+            $("#result_rna").append("<div>RNAファイルを指定してください。</div>")
+        }else{
+            fd.append("rna_file", $('input[type=file]')[1].files[0])
+
+            $.ajax({
+                type: "POST",
+                url: "../../cgi-bin/drug/upload_rna.py",
+                data: fd,
+                processData: false,
+                contentType: false,
+                datatype: "json",
+                success: function(json){
+                    var html = ""
+                    if (json == ""){
+                        $("#table_rna").after("<div>検索結果はありません。</div>")
+                        return
+                    }
+
+                    var data = json.split("|")
+                    for (var i=0; i<data.length; i++){
+                        var buf = data[i].split(",")
+                        if (buf[1] == undefined){
+                            continue
+                        }
+
+                        var str = "<div class='drug_wapper'>"
+                                + "<span class='drug_header' id='table_rna_"+i+"'>"+buf[1]+"("+buf[2]+") 製品名："+buf[3]+"</span>"
+                                //+ "<input type=button class='open_table' id=btn_wfg_ind_"+i+" value='医薬品一覧'>"
+                                + "<input type=button class='open_table' id=btn_rna_ctg_"+i+" value='治験一覧'>"
+                                //+ "<table class='ind_table' id='table_wfg_ind_"+i+"' border='1' width='70%'><tbody>"+ind_str+"</tbody></table>"
+                                //+ "<br>"
+                                + "<table class='rct_table' id='table_rna_ctg_"+i+"' border='1' width='95%'><tbody>"
+                                + "<tr><th width='3%'>治験ID</th><th width='6%'>ステータス</th><th width='50%'>タイトル</th></tr>"
+                                + "</tbody></table>"
+                                + "</div>"
+                                + "<br>"
+
+                        $("#result_rna").append(str)
+
+                        get_clinicaltrial(buf[1], i, "rna")
+                        get_clinicaltrial(buf[2], i, "rna")
+                    }
+                },
+            }).fail(function(response, textStatus, jqXHR){
+                console.log(response)
+                console.log(textStatus)
+                console.log(jqXHR)
+            });
+        }
+
+
+        //search .vcf
+        if($('input[type=file]')[0].files.length == 0){
+            $("#result_vcf").append("<div>VCFファイルを指定してください。</div>")
+        }else{
+        }
+
+        //search .log2
+        if($('input[type=file]')[2].files.length == 0){
+            $("#result_log2").append("<div>.log2ファイルを指定してください。</div>")
+        }else{
+        }
+
+
+
+        //search drug
+        if(search_text == ""){
+            $("#result_diseasename").after("<div>病名を入力してください。</div>")
+        }else{
+            $.ajax({
+                type: "POST",
+                url: "./server.php",
+                data: {
+                    "type": "search_id",
+                    "text": search_text
+                },
+                success: function(json){
+                    var data = json.split("|||")
+
+                    for (var i=0; i<data.length; i++){
+                        var buf = data[i].split("|")
+                        var name_en = buf[1]
+                        var name_ja = buf[2]
+                        var row_num = i
+                        var indication = buf[3].split(",")
+
+                        var ind_str = "<tr><th width='15%'>一般名</th>"
+                                    + "<th width='20%'>販売名</th>"
+                                    + "<th width='8%'>PDF文書</th>"
+                                    + "<th width='30%'>製薬会社</th>"
+                                    + "<th width='10%'>薬価</th>"
+                                    + "<th width='20%'>区分</th></tr>"
+
+                        for (var j=0; j<indication.length; j++){
+                            var aa = indication[j].split("_")
+                            var japic_num = aa[0]
+                            var japic_name = aa[1]
+                            var url = "https://pins.japic.or.jp/pdf/newPINS/"+japic_num+".pdf"
+
+                            if (japic_name == "ベプシド"){
+                                var n1 = "ベプシド注100mg"
+                                var n2 = "ブリストル・マイヤーズスクイブ"
+                                var n3 = "4172円／瓶"
+                                var n4 = "劇薬 , 処方箋医薬品"
+                            }else{
+                                var n1 = ""
+                                var n2 = ""
+                                var n3 = ""
+                                var n4 = ""
+                            }
+
+                            ind_str += "<tr><td>"+japic_name+"</td>"
+                                    + "<td>"+n1+"</td>"
+                                    + "<td><a href='"+url+"' target='_blank'>"+japic_num+"</td>"
+                                    + "<td>"+n2+"</td>"
+                                    + "<td>"+n3+"</td>"
+                                    + "<td>"+n4+"</td>"
+                                    + "</tr>"
+                        }
+
+                        var str = "<div class='drug_wapper'>"
+                                + "<span class='drug_header' id='table_dn_"+i+"'>"+name_en+"("+name_ja+")</span>"
+                                + "<input type=button class='open_table' id=btn_dn_ind_"+i+" value='医薬品一覧'>"
+                                + "<input type=button class='open_table' id=btn_dn_ctg_"+i+" value='治験一覧'>"
+                                + "<table class='ind_table' id='table_dn_ind_"+i+"' border='1' width='75%'><tbody>"+ind_str+"</tbody></table>"
+                                + "<div style='height:10px;'></div>"
+                                + "<table class='rct_table' id='table_dn_ctg_"+i+"' border='1' width='95%'><tbody>"
+                                + "<tr><th width='3%'>治験ID</th><th width='6%'>ステータス</th><th width='50%'>タイトル</th></tr>"
+                                + "</tbody></table>"
+                                + "</div>"
+                                + "<br>"
+
+                        $("#result_diseasename").append(str)
+
+
+                        get_clinicaltrial(name_en, i, "dn")
+                        get_clinicaltrial(name_ja, i, "dn")
+                    }
+
+
+                }
+            }).fail(function(response, textStatus, jqXHR){
+                console.log(response)
+                console.log(textStatus)
+                console.log(jqXHR)
+            });
+        }
+
+
+
+    })
+
+
+})
+
+
+
+
+
+
+</script>
+
+<style>
+body{
+    font-family: Meiryo;
+}
+#wapper{
+    width: 100vw;
+    height: 100vh;
+}
+#left_area{
+    width: 18%;
+    height: 100%;
+    float: left;
+}
+#middle_area{
+    /* width: 1%; */
+    height: 100%;
+    border: 1px solid gray;
+    float: left;
+}
+#right_area{
+    width: 81%;
+    height: 100%;
+    float: right;
+}
+#search_btn{
+    width: 100px;
+    height: 30px;
+    font-size: 15px;
+    background-color: skyblue;
+}
+input[type="file"]{
+}
+
+</style>
+
+<body>
+    <span>WfGがコールしない薬剤リスト</span>
+    <input type="button" id="search_btn" value="search">
+    <hr>
+    <div id="wapper">
+        <div id="left_area">
+            1, 病名
+            <input type="text" id="search_text" value="">
+            <br><br>
+
+            2, .vcf file
+            <input type="file" name="file" id="file" accept=".vcf">
+            <br>
+
+            3, RNA file(.dge)
+            <input type="file" name="file" id="file" accept=".dge">
+            <br>
+
+            4, Copy Number(.log2)
+            <input type="file" name="file" id="file" accept=".log2">
+            <br>
+
+            5, WfGダウンロードファイル(.json)
+            <input type="file" name="file" id="file" accept=".json">
+            <br>
+
+            6, G-band
+            <input type="text" id="search_gband" value="del(5)(q13q33) ">
+            <br>
+
+        </div>
+
+        <div id="middle_area"></div>
+
+        <div id="right_area">
+            1, 病名
+            <div id="result_diseasename" style='width:95%;'></div>
+            <br>
+
+            2, vcf
+            <div id="result_vcf" style='width:95%;'></div>
+            <br>
+
+            3, RNA
+            <div id="result_rna" style='width:95%;'></div>
+            <br>
+
+            4, Copy Number
+            <div id="result_log2" style='width:95%;'></div>
+            <br>
+
+            5, WfGダウンロードファイル
+            <div id="result_wfg" style='width:95%;'></div>
+            <br>
+
+            6, G-band
+            <div id="result_gband" style='width:95%;'></div>
+
+        </div>
+    </div>
+
+
+</body>
+
+</html>
