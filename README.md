@@ -1,6 +1,6 @@
 # DRUGPedia
 
-This is the web tool that gives the kind of drugs not called by wfg system.<br>
+This is the web tool that shows the kind of drugs not called by wfg system.<br>
 Wfg is the famous thrid parties AI medical system, but it targets only to international molecullar targeting drug.<br>
 It's not good at calling other drugs such as domestical OTC ..etc , so it need to be customized to apply to the real hospital system.<br>
 
